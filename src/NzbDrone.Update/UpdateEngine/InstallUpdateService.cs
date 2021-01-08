@@ -84,6 +84,12 @@ namespace NzbDrone.Update.UpdateEngine
 
             Verify(installationFolder, processId);
 
+            if (installationFolder.EndsWith(@"\bin\Sonarr") || installationFolder.EndsWith(@"/bin/Sonarr"))
+            {
+                installationFolder = installationFolder.GetParentPath();
+                _logger.Info("Fixed Installation Folder: {0}", installationFolder);
+            }
+
             var appType = _detectApplicationType.GetAppType();
 
             _processProvider.FindProcessByName(ProcessProvider.SONARR_CONSOLE_PROCESS_NAME);
@@ -129,7 +135,7 @@ namespace NzbDrone.Update.UpdateEngine
                         {
                             // Old MacOS App stores Sonarr binaries in MacOS together with shell script
                             // Make shim executable
-                            _diskProvider.SetPermissions(shimPath, "0755");
+                            _diskProvider.SetFilePermissions(shimPath, "755", null);
                         }
                     }
                 }
@@ -151,7 +157,8 @@ namespace NzbDrone.Update.UpdateEngine
                     _terminateNzbDrone.Terminate(processId);
 
                     _logger.Info("Waiting for external auto-restart.");
-                    for (int i = 0; i < 5; i++)
+                    var theDakoLimit = 10;
+                    for (int i = 0; i < theDakoLimit; i++)
                     {
                         System.Threading.Thread.Sleep(1000);
 

@@ -2,9 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Web.UI;
 using NLog;
-using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.MediaFiles;
@@ -31,8 +29,10 @@ namespace NzbDrone.Core.Parser
                                                                 )(?:\b|$|[ .])",
                                                                 RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
 
-        private static readonly Regex RawHDRegex = new Regex(@"\b(?<rawhd>RawHD|1080i[-_. ]HDTV|Raw[-_. ]HD|MPEG[-_. ]?2)\b",
+        private static readonly Regex RawHDRegex = new Regex(@"\b(?<rawhd>RawHD|Raw[-_. ]HD)\b",
                                                                 RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly Regex MPEG2Regex = new Regex(@"\b(?<mpeg2>MPEG[-_. ]?2)\b");
 
         private static readonly Regex ProperRegex = new Regex(@"\b(?<proper>proper)\b",
                                                                 RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -46,7 +46,7 @@ namespace NzbDrone.Core.Parser
         private static readonly Regex RealRegex = new Regex(@"\b(?<real>REAL)\b",
                                                                 RegexOptions.Compiled);
 
-        private static readonly Regex ResolutionRegex = new Regex(@"\b(?:(?<R360p>360p)|(?<R480p>480p|640x480|848x480)|(?<R576p>576p)|(?<R720p>720p|1280x720)|(?<R1080p>1080p|1920x1080|1440p|FHD|1080i)|(?<R2160p>2160p|4k[-_. ](?:UHD|HEVC|BD)|(?:UHD|HEVC|BD)[-_. ]4k))\b",
+        private static readonly Regex ResolutionRegex = new Regex(@"\b(?:(?<R360p>360p)|(?<R480p>480p|640x480|848x480)|(?<R576p>576p)|(?<R720p>720p|1280x720)|(?<R1080p>1080p|1920x1080|1440p|FHD|1080i|4kto1080p)|(?<R2160p>2160p|4k[-_. ](?:UHD|HEVC|BD)|(?:UHD|HEVC|BD)[-_. ]4k))\b",
                                                                 RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private static readonly Regex CodecRegex = new Regex(@"\b(?:(?<x264>x264)|(?<h264>h264)|(?<xvidhd>XvidHD)|(?<xvid>Xvid)|(?<divx>divx))\b",
@@ -210,6 +210,12 @@ namespace NzbDrone.Core.Parser
 
                 if (sourceMatch.Groups["hdtv"].Success)
                 {
+                    if (MPEG2Regex.IsMatch(normalizedName))
+                    {
+                        result.Quality = Quality.RAWHD;
+                        return result;
+                    }
+
                     if (resolution == Resolution.R2160p)
                     {
                         result.Quality = Quality.HDTV2160p;
@@ -403,7 +409,6 @@ namespace NzbDrone.Core.Parser
                 }
             }
 
-
             if (codecRegex.Groups["x264"].Success)
             {
                 result.Quality = Quality.SDTV;
@@ -538,12 +543,14 @@ namespace NzbDrone.Core.Parser
             if (ProperRegex.IsMatch(normalizedName))
             {
                 result.Revision.Version = 2;
+                result.RevisionDetectionSource = QualityDetectionSource.Name;
             }
 
             if (RepackRegex.IsMatch(normalizedName))
             {
                 result.Revision.Version = 2;
                 result.Revision.IsRepack = true;
+                result.RevisionDetectionSource = QualityDetectionSource.Name;
             }
 
             var versionRegexResult = VersionRegex.Match(normalizedName);
@@ -551,6 +558,7 @@ namespace NzbDrone.Core.Parser
             if (versionRegexResult.Success)
             {
                 result.Revision.Version = Convert.ToInt32(versionRegexResult.Groups["version"].Value);
+                result.RevisionDetectionSource = QualityDetectionSource.Name;
             }
 
             // TODO: re-enable this when we have a reliable way to determine real
@@ -560,6 +568,7 @@ namespace NzbDrone.Core.Parser
             if (realRegexResult.Count > 0)
             {
                 result.Revision.Real = realRegexResult.Count;
+                result.RevisionDetectionSource = QualityDetectionSource.Name;
             }
 
             return result;

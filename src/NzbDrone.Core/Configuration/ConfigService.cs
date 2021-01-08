@@ -184,7 +184,7 @@ namespace NzbDrone.Core.Configuration
 
         public int DownloadClientHistoryLimit
         {
-            get { return GetValueInt("DownloadClientHistoryLimit", 30); }
+            get { return GetValueInt("DownloadClientHistoryLimit", 60); }
 
             set { SetValue("DownloadClientHistoryLimit", value); }
         }
@@ -252,11 +252,18 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("SetPermissionsLinux", value); }
         }
 
-        public string FileChmod
+        public string ChmodFolder
         {
-            get { return GetValue("FileChmod", "0644"); }
+            get { return GetValue("ChmodFolder", "755"); }
 
-            set { SetValue("FileChmod", value); }
+            set { SetValue("ChmodFolder", value); }
+        }
+
+        public string ChownGroup
+        {
+            get { return GetValue("ChownGroup", ""); }
+
+            set { SetValue("ChownGroup", value); }
         }
 
         public int FirstDayOfWeek

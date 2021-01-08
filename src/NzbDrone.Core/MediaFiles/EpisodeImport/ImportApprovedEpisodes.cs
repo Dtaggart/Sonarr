@@ -218,6 +218,15 @@ namespace NzbDrone.Core.MediaFiles.EpisodeImport
                 return fileName;
             }
 
+            var folderTitle = localEpisode.FolderEpisodeInfo?.ReleaseTitle;
+
+            if (localEpisode.FolderEpisodeInfo?.FullSeason == false &&
+                folderTitle.IsNotNullOrWhiteSpace() &&
+                SceneChecker.IsSceneTitle(folderTitle))
+            {
+                return folderTitle;
+            }
+
             return null;
         }
     }

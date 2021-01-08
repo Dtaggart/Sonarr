@@ -55,6 +55,11 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
             }
             catch (WebException ex)
             {
+                if (ex.Status == WebExceptionStatus.TrustFailure)
+                {
+                    throw new DownloadClientUnavailableException("Unable to connect to qBittorrent, certificate validation failed.", ex);
+                }
+
                 throw new DownloadClientException("Failed to connect to qBittorrent, check your settings.", ex);
             }
         }
@@ -101,6 +106,15 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
             var request = BuildRequest(settings).Resource("/api/v2/torrents/properties")
                                                 .AddQueryParam("hash", hash);
             var response = ProcessRequest<QBittorrentTorrentProperties>(request, settings);
+
+            return response;
+        }
+
+        public List<QBittorrentTorrentFile> GetTorrentFiles(string hash, QBittorrentSettings settings)
+        {
+            var request = BuildRequest(settings).Resource("/api/v2/torrents/files")
+                                                .AddQueryParam("hash", hash);
+            var response = ProcessRequest<List<QBittorrentTorrentFile>>(request, settings);
 
             return response;
         }

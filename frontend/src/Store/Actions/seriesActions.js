@@ -10,7 +10,8 @@ import createFetchHandler from './Creators/createFetchHandler';
 import createSaveProviderHandler from './Creators/createSaveProviderHandler';
 import createRemoveItemHandler from './Creators/createRemoveItemHandler';
 import createHandleActions from './Creators/createHandleActions';
-import { updateItem } from './baseActions';
+import { updateItem, set } from './baseActions';
+import { fetchEpisodes } from './episodeActions';
 
 //
 // Local
@@ -121,7 +122,9 @@ export const filterPredicates = {
 
   sizeOnDisk: function(item, filterValue, type) {
     const predicate = filterTypePredicates[type];
-    const sizeOnDisk = item.statistics ? item.statistics.sizeOnDisk : 0;
+    const sizeOnDisk = item.statistics && item.statistics.sizeOnDisk ?
+      item.statistics.sizeOnDisk :
+      0;
 
     return predicate(sizeOnDisk, filterValue);
   }
@@ -145,7 +148,7 @@ export const sortPredicates = {
   sizeOnDisk: function(item) {
     const { statistics = {} } = item;
 
-    return statistics.sizeOnDisk;
+    return statistics.sizeOnDisk || 0;
   }
 };
 
@@ -174,6 +177,7 @@ export const DELETE_SERIES = 'series/deleteSeries';
 
 export const TOGGLE_SERIES_MONITORED = 'series/toggleSeriesMonitored';
 export const TOGGLE_SEASON_MONITORED = 'series/toggleSeasonMonitored';
+export const UPDATE_SERIES_MONITOR = 'series/updateSeriesMonitor';
 
 //
 // Action Creators
@@ -207,6 +211,7 @@ export const deleteSeries = createThunk(DELETE_SERIES, (payload) => {
 
 export const toggleSeriesMonitored = createThunk(TOGGLE_SERIES_MONITORED);
 export const toggleSeasonMonitored = createThunk(TOGGLE_SEASON_MONITORED);
+export const updateSeriesMonitor = createThunk(UPDATE_SERIES_MONITOR);
 
 export const setSeriesValue = createAction(SET_SERIES_VALUE, (payload) => {
   return {
@@ -375,8 +380,54 @@ export const actionHandlers = handleThunks({
           });
         });
     }, MONITOR_TIMEOUT);
-  }
+  },
 
+  [UPDATE_SERIES_MONITOR]: function(getState, payload, dispatch) {
+    const {
+      id,
+      monitor
+    } = payload;
+
+    const seriesToUpdate = { id };
+
+    if (monitor !== 'None') {
+      seriesToUpdate.monitored = true;
+    }
+
+    dispatch(set({
+      section,
+      isSaving: true
+    }));
+
+    const promise = createAjaxRequest({
+      url: '/seasonPass',
+      method: 'POST',
+      data: JSON.stringify({
+        series: [
+          seriesToUpdate
+        ],
+        monitoringOptions: { monitor }
+      }),
+      dataType: 'json'
+    }).request;
+    promise.done((data) => {
+      dispatch(fetchEpisodes({ seriesId: id }));
+
+      dispatch(set({
+        section,
+        isSaving: false,
+        saveError: null
+      }));
+    });
+
+    promise.fail((xhr) => {
+      dispatch(set({
+        section,
+        isSaving: false,
+        saveError: xhr
+      }));
+    });
+  }
 });
 
 //
